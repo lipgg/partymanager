@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>YaotouPartyManager</AssemblyName>
+    <RootNamespace>YaotouPartyManager</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>窑头社区</Authors>
+    <Product>窑头社区党员管理系统</Product>
+    <Description>窑头社区党员管理系统 - 专为基层党组织设计的党员信息管理平台</Description>
+    <Company>窑头社区党支部</Company>
+    <Copyright>Copyright © 2026 窑头社区党支部</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.118" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Resources\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

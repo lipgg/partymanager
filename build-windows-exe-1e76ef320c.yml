@@ -1,0 +1,125 @@
+name: 构建Windows版EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 MSBuild 路径
+      uses: microsoft/setup-msbuild@v2
+      
+    - name: 安装 NuGet
+      uses: NuGet/setup-nuget@v2
+      
+    - name: 还原 NuGet 包
+      run: |
+        nuget restore YaotouPartyManager.csproj
+        
+    - name: 清理旧的编译产物
+      run: |
+        if exist bin rmdir /s /q bin
+        if exist obj rmdir /s /q obj
+        
+    - name: 编译项目
+      run: |
+        msbuild YaotouPartyManager.csproj `
+          -p:Configuration=${{ github.event.inputs.build_type || 'Release' }} `
+          -p:Platform="Any CPU" `
+          -p:OutputPath=bin\Release\ `
+          -v:minimal `
+          -nologo
+          
+    - name: 验证编译产物
+      run: |
+        if not exist "bin\Release\YaotouPartyManager.exe" (
+          echo "错误: 未找到编译产物 YaotouPartyManager.exe"
+          exit 1
+        )
+        echo "编译产物验证成功"
+        dir bin\Release
+        
+    - name: 创建发布目录
+      run: |
+        mkdir release
+        
+    - name: 复制可执行文件和依赖
+      run: |
+        copy bin\Release\*.exe release\
+        copy bin\Release\*.dll release\
+        copy bin\Release\*.config release\ 2>nul
+        
+    - name: 复制文档文件
+      run: |
+        copy README.md release\
+        copy 快速启动指南.md release\
+        
+    - name: 创建数据库目录
+      run: |
+        mkdir release\Data
+        
+    - name: 创建启动脚本
+      run: |
+        echo @echo off > release\启动.bat
+        echo start YaotouPartyManager.exe >> release\启动.bat
+        echo exit >> release\启动.bat
+        
+    - name: 创建版本信息文件
+      run: |
+        echo 窑头社区党员管理系统 > release\版本信息.txt
+        echo 版本: 1.0.0 >> release\版本信息.txt
+        echo 构建时间: %date% %time% >> release\版本信息.txt
+        echo 构建平台: Windows >> release\版本信息.txt
+        echo .NET Framework: 4.8 >> release\版本信息.txt
+        echo 构建类型: ${{ github.event.inputs.build_type || 'Release' }} >> release\版本信息.txt
+        echo 提交ID: %GITHUB_SHA% >> release\版本信息.txt
+        
+    - name: 创建 ZIP 压缩包
+      run: |
+        powershell Compress-Archive -Path release\* -DestinationPath 窑头社区党员管理系统_v1.0.0_Windows.zip
+        
+    - name: 上传 ZIP 压缩包
+      uses: actions/upload-artifact@v4
+      with:
+        name: 窑头社区党员管理系统_Windows_ZIP
+        path: 窑头社区党员管理系统_v1.0.0_Windows.zip
+        retention-days: 90
+        
+    - name: 上传未压缩文件
+      uses: actions/upload-artifact@v4
+      with:
+        name: 窑头社区党员管理系统_Windows_Files
+        path: release\
+        retention-days: 90
+        
+    - name: 生成构建摘要
+      run: |
+        echo "# 🎉 构建成功" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "## 📦 构建产物" >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "- **ZIP 压缩包**: 窑头社区党员管理系统_v1.0.0_Windows.zip" >> $env:GITHUB_STEP_SUMMARY
+        echo "- **文件列表**:" >> $env:GITHUB_STEP_SUMMARY
+        dir release /B >> $env:GITHUB_STEP_SUMMARY
+        echo "" >> $env:GITHUB_STEP_SUMMARY
+        echo "## 📋 系统信息" >> $env:GITHUB_STEP_SUMMARY
+        echo "- **构建平台**: Windows" >> $env:GITHUB_STEP_SUMMARY
+        echo "- **.NET Framework**: 4.8" >> $env:GITHUB_STEP_SUMMARY
+        echo "- **构建类型**: ${{ github.event.inputs.build_type || 'Release' }}" >> $env:GITHUB_STEP_SUMMARY
+        echo "- **提交SHA**: ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
